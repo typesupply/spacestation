@@ -1,0 +1,3 @@
+from spaceStation import SpaceStationController
+
+SpaceStationController().showGlyphEditorSpaceStation()
