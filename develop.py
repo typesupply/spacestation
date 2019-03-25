@@ -16,6 +16,17 @@ if os.path.exists(buildCompletedMarkerPath):
 if os.path.exists(openDocumentsRecordPath):
     os.remove(openDocumentsRecordPath)
 
+# Make sure RoboFont is open.
+
+haveRoboFont = NSRunningApplication.runningApplicationsWithBundleIdentifier_("com.typemytype.robofont3")
+
+if not haveRoboFont:
+    print("Launching RoboFont...")
+
+    workspace = NSWorkspace.sharedWorkspace()
+    workspace.launchApplication_("RoboFont")
+    time.sleep(5)
+
 # Build the extension.
 
 print("Building extension...")
@@ -92,20 +103,30 @@ if success:
 
     f = open(openDocumentsRecordPath, "r")
     openDocumentPaths = f.read().splitlines()
-    f.close()
     os.remove(openDocumentsRecordPath)
-
-    workspace = NSWorkspace.sharedWorkspace()
 
     # Shut down.
     NSRunningApplication.runningApplicationsWithBundleIdentifier_("com.typemytype.robofont3")[0].forceTerminate()
 
     # Launch.
-    workspace.launchApplication_("RoboFont")
+    maxWaitTime = 5
+    startTime = time.time()
+    while 1:
+        workspace = NSWorkspace.sharedWorkspace()
+        success = workspace.launchApplication_("RoboFont")
+        if not success:
+            time.sleep(0.5)
+        else:
+            break
+        if time.time() - startTime > maxWaitTime:
+            print("Failed to open RoboFont.")
+            break
 
     # Reopen the documents.
-    for path in openDocumentPaths:
-        workspace.openFile_withApplication_(path, "RoboFont")
+    if openDocumentPaths:
+        for path in openDocumentPaths:
+            print("Opening " + path + "...")
+            workspace.openFile_withApplication_(path, "RoboFont")
 
     print("RoboFont has been restored.")
 
