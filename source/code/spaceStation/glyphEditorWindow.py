@@ -1,7 +1,7 @@
 from AppKit import *
 import vanilla
 from mojo.UI import StatusInteractivePopUpWindow, CurrentGlyphWindow
-from .expressions import expressionLibKeyStub, calculateMetricsExpression
+from .expressions import expressionLibKeyStub, calculateMetricsExpression, getAngledAttrIfNecessary
 from .tools import roundint
 
 
@@ -138,6 +138,7 @@ class GlyphEditorSpaceStationController(object):
             if attr in ("leftMargin", "rightMargin") and self.glyph.bounds is None:
                 value = ""
             else:
+                attr = getAngledAttrIfNecessary(self.glyph.font, attr)
                 value = getattr(self.glyph, attr)
                 value = roundint(value)
             field.set(value)
@@ -189,6 +190,7 @@ class GlyphEditorSpaceStationController(object):
                 NSBeep()
                 return
         self.glyph.prepareUndo("Spacing Change")
+        attr = getAngledAttrIfNecessary(self.glyph.font, attr)
         setattr(self.glyph, attr, value)
         self.glyph.performUndo()
         self._updateFields()
@@ -205,6 +207,7 @@ class GlyphEditorSpaceStationController(object):
             NSBeep()
             return
         self.glyph.prepareUndo("Spacing Change")
+        attr = getAngledAttrIfNecessary(self.glyph.font, attr)
         setattr(self.glyph, attr, value)
         self.glyph.performUndo()
         self._updateFields()

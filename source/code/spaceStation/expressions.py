@@ -24,13 +24,13 @@ def calculateMetricsExpression(glyph, expression, impliedAttr):
     for symbol in mathSymbols:
         expression = expression.replace(symbol, " " + symbol + " ")
     expression = [i for i in expression.split(" ") if i]
-    expression = _expandVariablesInExpression(glyph.layer, expression, impliedAttr)
+    expression = _expandVariablesInExpression(glyph, glyph.layer, expression, impliedAttr)
     if expression is None:
         return None
     value = _evaluateExpression(expression)
     return value
 
-def _expandVariablesInExpression(layer, expression, impliedAttr="leftMargin"):
+def _expandVariablesInExpression(glyph, layer, expression, impliedAttr="leftMargin"):
     expanded = []
     for part in expression:
         if part in mathSymbols:
@@ -51,10 +51,14 @@ def _expandVariablesInExpression(layer, expression, impliedAttr="leftMargin"):
                 elif part.endswith(".right"):
                     attr = "rightMargin"
                     part = part[:-len(".right")]
-                if part not in layer:
+                if not part:
+                    part = glyph
+                elif part not in layer:
                     return None
-                glyph = layer[part]
-                value = getattr(glyph, attr)
+                else:
+                    part = layer[part]
+                attr = getAngledAttrIfNecessary(layer.font, attr)
+                value = getattr(part, attr)
             expanded.append(str(value))
     return expanded
 
@@ -62,3 +66,16 @@ def _evaluateExpression(expression):
     text = " ".join(expression)
     value = eval(text)
     return value
+
+# -----
+# Tools
+# -----
+
+def getAngledAttrIfNecessary(font, attr):
+    useAngledMargins = font.info.italicAngle != 0
+    if useAngledMargins:
+        if attr == "leftMargin":
+            attr = "angledLeftMargin"
+        elif attr == "rightMargin":
+            attr = "angledRightMargin"
+    return attr

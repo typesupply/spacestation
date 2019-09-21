@@ -53,6 +53,7 @@ def _expandVariablesInExpression(layer, expression, impliedAttr="leftMargin"):
                     part = part[:-len(".right")]
                 if part not in layer:
                     return None
+                attr = getAngledAttrIfNecessary(layer.font, attr)
                 glyph = layer[part]
                 value = getattr(glyph, attr)
             expanded.append(str(value))
@@ -62,3 +63,16 @@ def _evaluateExpression(expression):
     text = " ".join(expression)
     value = eval(text)
     return value
+
+# -----
+# Tools
+# -----
+
+def getAngledAttrIfNecessary(font, attr):
+    useAngledMargins = font.info.italicAngle != 0
+    if useAngledMargins:
+        if attr == "leftMargin":
+            attr = "angledLeftMargin"
+        elif attr == "rightMargin":
+            attr = "angledRightMargin"
+    return attr

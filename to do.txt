@@ -1,0 +1,5 @@
+- add (X) to clear stored formula
+- buttons aren't always disabled at startup as needed
+- use cmd, shift and option + arrow to make quick adjustments
+
+- HUD control with quick shortcuts to apply formula
