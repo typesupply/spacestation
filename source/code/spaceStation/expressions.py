@@ -57,8 +57,7 @@ def _expandVariablesInExpression(glyph, layer, expression, impliedAttr="leftMarg
                     return None
                 else:
                     part = layer[part]
-                attr = getAngledAttrIfNecessary(layer.font, attr)
-                value = getattr(part, attr)
+                value = getMetricValue(part, attr)
             expanded.append(str(value))
     return expanded
 
@@ -70,6 +69,14 @@ def _evaluateExpression(expression):
 # -----
 # Tools
 # -----
+
+def getMetricValue(glyph, attr):
+    attr = getAngledAttrIfNecessary(glyph.font, attr)
+    return getattr(glyph, attr)
+
+def setMetricValue(glyph, attr, value):
+    attr = getAngledAttrIfNecessary(glyph.font, attr)
+    setattr(glyph, attr, value)
 
 def getAngledAttrIfNecessary(font, attr):
     useAngledMargins = font.info.italicAngle != 0

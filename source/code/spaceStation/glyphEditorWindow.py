@@ -1,7 +1,7 @@
 from AppKit import *
 import vanilla
 from mojo.UI import StatusInteractivePopUpWindow, CurrentGlyphWindow
-from .expressions import expressionLibKeyStub, calculateMetricsExpression, getAngledAttrIfNecessary
+from .expressions import expressionLibKeyStub, calculateMetricsExpression, getMetricValue, setMetricValue
 from .tools import roundint
 
 
@@ -138,8 +138,7 @@ class GlyphEditorSpaceStationController(object):
             if attr in ("leftMargin", "rightMargin") and self.glyph.bounds is None:
                 value = ""
             else:
-                attr = getAngledAttrIfNecessary(self.glyph.font, attr)
-                value = getattr(self.glyph, attr)
+                value = getMetricValue(self.glyph, attr)
                 value = roundint(value)
             field.set(value)
 
@@ -153,7 +152,7 @@ class GlyphEditorSpaceStationController(object):
                 button.enable(False)
                 return
             calculatedValue = calculateMetricsExpression(self.glyph, expression, attr)
-            value = getattr(self.glyph, attr)
+            value = getMetricValue(self.glyph, attr)
             if roundint(value) != roundint(calculatedValue):
                 color = outSyncButtonColor
             else:
@@ -190,8 +189,7 @@ class GlyphEditorSpaceStationController(object):
                 NSBeep()
                 return
         self.glyph.prepareUndo("Spacing Change")
-        attr = getAngledAttrIfNecessary(self.glyph.font, attr)
-        setattr(self.glyph, attr, value)
+        setMetricValue(self.glyph, attr, value)
         self.glyph.performUndo()
         self._updateFields()
         self._updateButtons()
@@ -207,8 +205,7 @@ class GlyphEditorSpaceStationController(object):
             NSBeep()
             return
         self.glyph.prepareUndo("Spacing Change")
-        attr = getAngledAttrIfNecessary(self.glyph.font, attr)
-        setattr(self.glyph, attr, value)
+        setMetricValue(self.glyph, attr, value)
         self.glyph.performUndo()
         self._updateFields()
         self._updateButtons()
