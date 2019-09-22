@@ -1,7 +1,7 @@
 from AppKit import *
 import vanilla
 from mojo.UI import StatusInteractivePopUpWindow, CurrentGlyphWindow
-from .expressions import expressionLibKeyStub, calculateMetricsExpression, getMetricValue, setMetricValue
+from .expressions import getExpression, setExpression, calculateMetricsExpression, getMetricValue, setMetricValue
 from .tools import roundint
 
 
@@ -146,7 +146,7 @@ class GlyphEditorSpaceStationController(object):
         for group in self.controlGroups:
             attr = group["attr"]
             button = group["button"]
-            expression = self.glyph.lib.get(expressionLibKeyStub + attr)
+            expression = getExpression(self.glyph, attr)
             if not expression:
                 button.setTitle("")
                 button.enable(False)
@@ -181,7 +181,7 @@ class GlyphEditorSpaceStationController(object):
                 NSBeep()
                 return
             field.set(str(roundint(value)))
-            self.glyph.lib[expressionLibKeyStub + attr] = expression
+            setExpression(self.glyph, attr, expression)
         else:
             try:
                 value = int(value)
