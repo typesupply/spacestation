@@ -1,31 +1,34 @@
-from spaceStation.expressions import getExpression, getReferencesInExpression
-
-class SpaceStationError(Exception): pass
+from spaceStation.formulas import getFormula, getReferencesInFormula, splitReference
+from spaceStation import SpaceStationError
 
 # -----------
 # Application
 # -----------
 
 def calculateLayer(layer):
-    pass
+    sequence = getResolutionSequence(layer)
+    for group in sequence:
+        for reference in group:
+            glyphName, attr = splitReference(reference)
+
 
 # ---------------------
 # Resolution Sequencing
 # ---------------------
 
-"""
-XXX:
-- need to look at .left and .right in sequencing
-maybe this is done in the resolution sequencing by having left, right and width divisions in each loop
-"""
+maximumReferenceDepth = 20
 
-maximumRecursionDepth = 20
-
-def getResolutionSequence(layer, attr):
-    glyphNames = [glyphName for glyphName in layer.keys() if getExpression(layer[glyphName], attr)]
+def getResolutionSequence(layer):
+    glyphNames = set()
+    for glyphName in layer.keys():
+        glyph = layer[glyphName]
+        for attr in "leftMargin rightMargin width".split(" "):
+            formula = getFormula(glyph, attr)
+            if formula:
+                glyphNames |= getReferencesInFormula(formula, attr)
     sequence = [glyphNames]
-    for i in range(maximumRecursionDepth):
-        glyphNames = getGlyphsNeedingCalculation(layer, attr, glyphNames)
+    for i in range(maximumReferenceDepth):
+        glyphNames = getGlyphsNeedingCalculation(layer, glyphNames)
         if not glyphNames:
             break
         else:
@@ -42,25 +45,27 @@ def getResolutionSequence(layer, attr):
         previous = glyphNames
     return compressed
 
-def getGlyphsNeedingCalculation(layer, attr, glyphNames):
+def getGlyphsNeedingCalculation(layer, glyphNames):
     found = set()
-    for glyphName in glyphNames:
+    for reference in glyphNames:
+        glyphName, attr = splitReference(reference)
         if glyphName not in layer:
             continue
         glyph = layer[glyphName]
-        expression = getExpression(glyph, attr)
-        if expression:
-            references = getReferencesInExpression(expression)
+        formula = getFormula(glyph, attr)
+        if formula:
+            references = getReferencesInFormula(formula, attr)
             if references:
                 found |= references
     return found
 
 def getDependenciesForGlyph(glyph, attr):
-    expression = getExpression(glyph, attr)
-    references = getReferencesInExpression(expression)
+    formula = getFormula(glyph, attr)
+    references = getReferencesInFormula(formula, attr)
     return references
 
 
 layer = CurrentLayer()
-for i in getResolutionSequence(layer, "leftMargin"):
+r = getResolutionSequence(layer)
+for i in r:
     print(len(i), i)

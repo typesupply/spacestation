@@ -1,31 +1,31 @@
 from .tools import roundint
 
-# --------
-# Lib Keys
-# --------
+# -------------
+# Lib Shortcuts
+# -------------
 
-expressionLibKeyStub = "com.typesupply.SpaceStation.expression."
+formulaLibKeyStub = "com.typesupply.SpaceStation.formula."
 
-def getExpression(glyph, attr):
+def getFormula(glyph, attr):
     """
-    Get the expression set in the glyph for the attr.
+    Get the formula set in the glyph for the attr.
     """
-    return glyph.lib.get(expressionLibKeyStub + attr)
+    return glyph.lib.get(formulaLibKeyStub + attr)
 
-def setExpression(glyph, attr, expression):
+def setFormula(glyph, attr, formula):
     """
-    Set the expression in the glyph for the attr.
+    Set the formula in the glyph for the attr.
     """
-    key = expressionLibKeyStub + attr
-    if expression is None:
+    key = formulaLibKeyStub + attr
+    if formula is None:
         if key in glyph.lib:
             del glyph.lib[key]
     else:
-        glyph.lib[key] = expression
+        glyph.lib[key] = formula
 
-def clearExpressions(glyph, attr=None):
+def clearFormulas(glyph, attr=None):
     """
-    Clear the expression for the attr from the glyph.
+    Clear the formula for the attr from the glyph.
     If no attr is given, all attrs will be cleared.
     """
     if attr is not None:
@@ -33,13 +33,13 @@ def clearExpressions(glyph, attr=None):
     else:
         attrs = symbolToAttribute.values()
     for attr in attrs:
-        key = expressionLibKeyStub + attr
+        key = formulaLibKeyStub + attr
         if key in glyph.lib:
             del glyph.lib[key]
 
-# -----------
-# Expressions
-# -----------
+# --------
+# Formulas
+# --------
 
 mathSymbols = """
 +
@@ -51,60 +51,51 @@ mathSymbols = """
 """.strip().splitlines()
 
 symbolToAttribute = {
-    ".left" : "leftMargin",
-    ".right" : "rightMargin",
-    ".width" : "width"
+    "@left" : "leftMargin",
+    "@right" : "rightMargin",
+    "@width" : "width"
 }
 
 attributeToSymbol = {}
 for symbol, attr in symbolToAttribute.items():
     attributeToSymbol[attr] = symbol
 
-def splitExpression(expression):
+def splitFormula(formula):
     """
-    Split an expression into parts.
+    Split a formula into parts.
     """
-    expression = expression.strip()
-    expression = expression.split("#", 1)[0]
-    if not expression:
+    formula = formula.strip()
+    formula = formula.split("#", 1)[0]
+    if not formula:
         return []
     for symbol in mathSymbols:
-        expression = expression.replace(symbol, " " + symbol + " ")
-    expression = [i for i in expression.split(" ") if i]
-    return expression
+        formula = formula.replace(symbol, " " + symbol + " ")
+    formula = [i for i in formula.split(" ") if i]
+    return formula
 
-def getReferencesInExpression(expression):
+def calculateFormula(glyph, formula, impliedAttr):
     """
-    Get glyphs referenced by an expression.
+    Calculate the value of a formula.
     """
-    expression = splitExpression(expression)
-    references = set()
-    for i in expression:
-        if i in mathSymbols:
-            continue
-        if i in symbolToAttribute:
-            continue
-        for symbol in symbolToAttribute.keys():
-            if i.endswith(symbol):
-                i = i[:-len(symbol)]
-                break
-        references.add(i)
-    return references
-
-def calculateMetricsExpression(glyph, expression, impliedAttr):
-    """
-    Calculate the value of an expression.
-    """
-    expression = splitExpression(expression)
-    expression = _expandVariablesInExpression(glyph, glyph.layer, expression, impliedAttr)
-    if expression is None:
+    formula = splitFormula(formula)
+    formula = _convertReferencesToNumbers(glyph, glyph.layer, formula, impliedAttr)
+    if formula is None:
         return None
-    value = _evaluateExpression(expression)
+    value = _evaluateFormula(formula)
     return value
 
-def _expandVariablesInExpression(glyph, layer, expression, impliedAttr="leftMargin"):
+def _evaluateFormula(formula):
+    text = " ".join(formula)
+    value = eval(text)
+    return value
+
+# ----------
+# References
+# ----------
+
+def _convertReferencesToNumbers(glyph, layer, formula, impliedAttr="leftMargin"):
     expanded = []
-    for part in expression:
+    for part in formula:
         if part in mathSymbols:
             expanded.append(part)
         else:
@@ -129,10 +120,36 @@ def _expandVariablesInExpression(glyph, layer, expression, impliedAttr="leftMarg
             expanded.append(str(value))
     return expanded
 
-def _evaluateExpression(expression):
-    text = " ".join(expression)
-    value = eval(text)
-    return value
+def getReferencesInFormula(formula, impliedAttr):
+    """
+    Get glyphs referenced by a formula.
+    """
+    formula = splitFormula(formula)
+    references = set()
+    for i in formula:
+        if i in mathSymbols:
+            continue
+        if i in symbolToAttribute:
+            continue
+        foundSymbol = False
+        for symbol in symbolToAttribute.keys():
+            if i.endswith(symbol):
+                foundSymbol = True
+                break
+        if not foundSymbol:
+            i += attributeToSymbol[impliedAttr]
+        references.add(i)
+    return references
+
+def splitReference(reference):
+    """
+    Split a reference into a glyph name and attribute.
+    """
+    for symbol, attr in symbolToAttribute.items():
+        if reference.endswith(symbol):
+            reference = reference[:-len(symbol)]
+            return reference, attr
+    return reference, None
 
 # -----
 # Tools
@@ -170,13 +187,25 @@ def getAngledAttrIfNecessary(font, attr):
 # I/O
 # ---
 
+syntax = """
+# SYNTAX
+# ------
+# # = comment. Anything after # will be ignored.
+# > = glyph name
+# L = left margin
+# R = right margin
+# W = width
+# 
+# Empty lines have no meaning.
+""".strip()
+
 def layerToString(layer, glyphOrder=None):
     """
-    Write the expressions for all glyph in the layer to a string.
+    Write the formulas for all glyph in the layer to a string.
     """
     if glyphOrder is None:
         glyphOrder = layer.font.glyphOrder
-    text = []
+    text = [syntax + "\n\n\n"]
     for glyphName in glyphOrder:
         if glyphName not in layer:
             continue
@@ -189,21 +218,21 @@ tokenOrder = list("LRW")
 
 def glyphToString(glyph):
     """
-    Write the expressions defined for the glyph to a string.
+    Write the formulas defined for the glyph to a string.
     """
     text = [
         "> " + glyph.name
     ]
     for token in tokenOrder:
         attr = tokenToAttr[token]
-        expression = getExpression(glyph, attr)
+        formula = getFormula(glyph, attr)
         line = token + " = "
-        if not expression:
+        if not formula:
             line = "#" + line
         else:
-            line += expression
+            line += formula
             value = roundint(getMetricValue(glyph, attr))
-            calculated = roundint(calculateMetricsExpression(glyph, expression, attr))
+            calculated = roundint(calculateFormula(glyph, formula, attr))
             if value != calculated:
                 line = "#" + line
                 line += " # value: {value} expected: {calculated}".format(value=value, calculated=calculated)
@@ -212,8 +241,8 @@ def glyphToString(glyph):
 
 def layerFromString(layer, text):
     """
-    Load the expressions for all glyphs in the layer from the text.
-    This does not apply the calculated expressions.
+    Load the formulas for all glyphs in the layer from the text.
+    This does not apply the calculated formulas.
     """
     glyphs = {}
     currentGlyph = None
@@ -235,10 +264,10 @@ def layerFromString(layer, text):
 
 def glyphFromString(glyph, text):
     """
-    Load the expressions for the glyph from the text.
-    This does not apply the calculated expressions.
+    Load the formulas for the glyph from the text.
+    This does not apply the calculated formulas.
     """
-    clearExpressions(glyph)
+    clearFormulas(glyph)
     for line in text.splitlines():
         line = line.split("#", 1)[0]
         line = line.strip()
@@ -248,10 +277,10 @@ def glyphFromString(glyph, text):
             continue
         if "=" not in line:
             continue
-        token, expression = line.split("=", 1)
+        token, formula = line.split("=", 1)
         token = token.strip()
-        expression = expression.strip()
+        formula = formula.strip()
         if token not in tokenToAttr:
             continue
         attr = tokenToAttr[token]
-        setExpression(glyph, attr, expression)
+        setFormula(glyph, attr, formula)

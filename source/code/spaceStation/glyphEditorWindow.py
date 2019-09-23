@@ -1,7 +1,7 @@
 from AppKit import *
 import vanilla
 from mojo.UI import StatusInteractivePopUpWindow, CurrentGlyphWindow
-from .expressions import getExpression, setExpression, calculateMetricsExpression, getMetricValue, setMetricValue
+from .formulas import getFormula, setFormula, calculateFormula, getMetricValue, setMetricValue
 from .tools import roundint
 
 
@@ -146,18 +146,18 @@ class GlyphEditorSpaceStationController(object):
         for group in self.controlGroups:
             attr = group["attr"]
             button = group["button"]
-            expression = getExpression(self.glyph, attr)
-            if not expression:
+            formula = getFormula(self.glyph, attr)
+            if not formula:
                 button.setTitle("")
                 button.enable(False)
                 return
-            calculatedValue = calculateMetricsExpression(self.glyph, expression, attr)
+            calculatedValue = calculateFormula(self.glyph, formula, attr)
             value = getMetricValue(self.glyph, attr)
             if roundint(value) != roundint(calculatedValue):
                 color = outSyncButtonColor
             else:
                 color = inSyncButtonColor
-            string = NSAttributedString.alloc().initWithString_attributes_(expression, {NSForegroundColorAttributeName : color})
+            string = NSAttributedString.alloc().initWithString_attributes_(formula, {NSForegroundColorAttributeName : color})
             button.setTitle(string)
             button.enable(True)
 
@@ -172,16 +172,16 @@ class GlyphEditorSpaceStationController(object):
         button = group["button"]
         value = field.get().strip()
         if value.startswith("="):
-            expression = value[1:]
-            if not expression:
+            formula = value[1:]
+            if not formula:
                 NSBeep()
                 return
-            value = calculateMetricsExpression(self.glyph, expression, attr)
+            value = calculateFormula(self.glyph, formula, attr)
             if value is None:
                 NSBeep()
                 return
             field.set(str(roundint(value)))
-            setExpression(self.glyph, attr, expression)
+            setFormula(self.glyph, attr, formula)
         else:
             try:
                 value = int(value)
@@ -199,8 +199,8 @@ class GlyphEditorSpaceStationController(object):
         attr = group["attr"]
         field = group["field"]
         button = group["button"]
-        expression = button.getTitle()
-        value = calculateMetricsExpression(self.glyph, expression, attr)
+        formula = button.getTitle()
+        value = calculateFormula(self.glyph, formula, attr)
         if value is None:
             NSBeep()
             return
