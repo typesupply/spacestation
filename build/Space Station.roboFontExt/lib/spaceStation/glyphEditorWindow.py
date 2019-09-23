@@ -1,7 +1,7 @@
 from AppKit import *
 import vanilla
 from mojo.UI import StatusInteractivePopUpWindow, CurrentGlyphWindow
-from .formulas import getFormula, setFormula, calculateFormula, getMetricValue, setMetricValue
+from .formulas import getFormula, setFormula, clearFormula, calculateFormula, getMetricValue, setMetricValue
 from .tools import roundint
 
 
@@ -16,74 +16,67 @@ class GlyphEditorSpaceStationController(object):
     def __init__(self, glyph):
         self.glyph = glyph
 
-        self.w = StatusInteractivePopUpWindow((250, 239), centerInView=CurrentGlyphWindow().getGlyphView())
+        self.w = StatusInteractivePopUpWindow((250, 0), centerInView=CurrentGlyphWindow().getGlyphView())
 
-        margin = 15
-        titleLeft = margin
-        titleWidth = 45
-        fieldLeft = titleLeft + titleWidth + 5
-        fieldWidth = -margin
-        buttonLeft = fieldLeft
-        buttonWidth = -margin
-        top = margin
+        metrics = dict(
+            border=15,
+            padding1=10,
+            padding2=5,
+            titleWidth=45,
+            inputSpace=70, # border + title + padding
+            killButtonWidth=20,
+            fieldHeight=22,
+        )
+        rules = [
+            # Left
+            "H:|-border-[leftTitle(==titleWidth)]-padding1-[leftField]-border-|",
+            "H:|-inputSpace-[leftButton]-padding2-[leftKillButton(==killButtonWidth)]-border-|",
+            "V:|-border-[leftTitle(==fieldHeight)]",
+            "V:|-border-[leftField(==fieldHeight)]",
+            "V:[leftField]-padding2-[leftButton]",
+            "V:[leftField]-padding2-[leftKillButton(==leftButton)]",
 
-        self.w.leftTitle = vanilla.TextBox(
-            (titleLeft, top + 3, titleWidth, 17),
-            "Left:",
-            alignment="right"
-        )
-        self.w.leftField = vanilla.EditText(
-            (fieldLeft, top, fieldWidth, 22),
-            "",
-            continuous=False,
-            callback=self.fieldCallback
-        )
-        self.w.leftButton = vanilla.Button(
-            (buttonLeft, top + 25, buttonWidth, 22),
-            "",
-            callback=self.buttonCallback
-        )
-        top += 60
+            # Right
+            "H:|-border-[rightTitle(==titleWidth)]-padding1-[rightField]-border-|",
+            "H:|-inputSpace-[rightButton]-padding2-[rightKillButton(==killButtonWidth)]-border-|",
+            "V:[leftButton]-padding1-[rightTitle(==fieldHeight)]",
+            "V:[leftButton]-padding1-[rightField(==fieldHeight)]",
+            "V:[rightField]-padding2-[rightButton]",
+            "V:[rightField]-padding2-[rightKillButton(==rightButton)]",
 
-        self.w.rightTitle = vanilla.TextBox(
-            (titleLeft, top + 3, titleWidth, 17),
-            "Right:",
-            alignment="right"
-        )
-        self.w.rightField = vanilla.EditText(
-            (fieldLeft, top, fieldWidth, 22),
-            "",
-            continuous=False,
-            callback=self.fieldCallback
-        )
-        self.w.rightButton = vanilla.Button(
-            (buttonLeft, top + 25, buttonWidth, 22),
-            "",
-            callback=self.buttonCallback
-        )
-        top += 60
+            # Width
+            "H:|-border-[widthTitle(==titleWidth)]-padding1-[widthField]-border-|",
+            "H:|-inputSpace-[widthButton]-padding2-[widthKillButton(==killButtonWidth)]-border-|",
+            "V:[rightButton]-padding1-[widthTitle(==fieldHeight)]",
+            "V:[rightButton]-padding1-[widthField(==fieldHeight)]",
+            "V:[widthField]-padding2-[widthButton]",
+            "V:[widthField]-padding2-[widthKillButton(==rightButton)]",
 
-        self.w.widthTitle = vanilla.TextBox(
-            (titleLeft, top + 3, titleWidth, 17),
-            "Width:",
-            alignment="right"
-        )
-        self.w.widthField = vanilla.EditText(
-            (fieldLeft, top, fieldWidth, 22),
-            "",
-            continuous=False,
-            callback=self.fieldCallback
-        )
-        self.w.widthButton = vanilla.Button(
-            (buttonLeft, top + 25, buttonWidth, 22),
-            "",
-            callback=self.buttonCallback
-        )
+            # Bottom
+            "H:|-inputSpace-[line]-border-|",
+            "H:|-inputSpace-[doneButton]-border-|",
+            "V:[widthButton]-padding1-[line]-padding1-[doneButton]-border-|",
+        ]
+
+        self.w.leftTitle = vanilla.TextBox("auto", "Left:", alignment="right")
+        self.w.leftField = vanilla.EditText("auto", "", continuous=False, callback=self.fieldCallback)
+        self.w.leftButton = vanilla.Button("auto", "", callback=self.buttonCallback)
+        self.w.leftKillButton = vanilla.ImageButton("auto", imageNamed=NSImageNameStopProgressFreestandingTemplate, bordered=False, callback=self.buttonCallback)
+
+        self.w.rightTitle = vanilla.TextBox("auto", "Right:", alignment="right")
+        self.w.rightField = vanilla.EditText("auto", "", continuous=False, callback=self.fieldCallback)
+        self.w.rightButton = vanilla.Button("auto", "", callback=self.buttonCallback)
+        self.w.rightKillButton = vanilla.ImageButton("auto", imageNamed=NSImageNameStopProgressFreestandingTemplate, bordered=False, callback=self.buttonCallback)
+
+        self.w.widthTitle = vanilla.TextBox("auto", "Width:", alignment="right")
+        self.w.widthField = vanilla.EditText("auto", "", continuous=False, callback=self.fieldCallback)
+        self.w.widthButton = vanilla.Button("auto", "", callback=self.buttonCallback)
+        self.w.widthKillButton = vanilla.ImageButton("auto", imageNamed=NSImageNameStopProgressFreestandingTemplate, bordered=False, callback=self.buttonCallback)
 
         self.controlGroups = [
-            dict(attr="leftMargin", field=self.w.leftField, button=self.w.leftButton),
-            dict(attr="rightMargin", field=self.w.rightField, button=self.w.rightButton),
-            dict(attr="width", field=self.w.widthField, button=self.w.widthButton),
+            dict(attr="leftMargin", field=self.w.leftField, button=self.w.leftButton, kill=self.w.leftKillButton),
+            dict(attr="rightMargin", field=self.w.rightField, button=self.w.rightButton, kill=self.w.rightKillButton),
+            dict(attr="width", field=self.w.widthField, button=self.w.widthButton, kill=self.w.widthKillButton),
         ]
         for group in self.controlGroups:
             field = group["field"]
@@ -99,16 +92,14 @@ class GlyphEditorSpaceStationController(object):
         leftField.setNextKeyView_(rightField)
         rightField.setNextKeyView_(leftField)
 
+        self.w.line = vanilla.HorizontalLine("auto")
+        self.w.doneButton = vanilla.Button("auto", "Close", callback=self.doneCallback)
+        self.w.doneButton.bind(escapeCharacter, [])
+
         self._updateFields()
         self._updateButtons()
 
-        self.w.line = vanilla.HorizontalLine((buttonLeft, -47, buttonWidth, 1))
-        self.w.doneButton = vanilla.Button(
-            (buttonLeft, -37, buttonWidth, 22),
-            "Close",
-            callback=self.doneCallback
-        )
-        self.w.doneButton.bind(escapeCharacter, [])
+        self.w.addAutoPosSizeRules(rules, metrics)
 
         self.w.open()
 
@@ -119,9 +110,12 @@ class GlyphEditorSpaceStationController(object):
         for group in self.controlGroups:
             field = group["field"]
             button = group["button"]
+            kill = group["kill"]
             if sender == field:
                 return group
             if sender == button:
+                return group
+            if sender == kill:
                 return group
 
     def doneCallback(self, sender):
@@ -199,13 +193,17 @@ class GlyphEditorSpaceStationController(object):
         attr = group["attr"]
         field = group["field"]
         button = group["button"]
-        formula = button.getTitle()
-        value = calculateFormula(self.glyph, formula, attr)
-        if value is None:
-            NSBeep()
-            return
-        self.glyph.prepareUndo("Spacing Change")
-        setMetricValue(self.glyph, attr, value)
-        self.glyph.performUndo()
+        kill = group["kill"]
+        if sender == kill:
+            clearFormula(self.glyph, attr)
+        else:
+            formula = button.getTitle()
+            value = calculateFormula(self.glyph, formula, attr)
+            if value is None:
+                NSBeep()
+                return
+            self.glyph.prepareUndo("Spacing Change")
+            setMetricValue(self.glyph, attr, value)
+            self.glyph.performUndo()
         self._updateFields()
         self._updateButtons()

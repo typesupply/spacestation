@@ -1,16 +1,21 @@
-from spaceStation.formulas import getFormula, getReferencesInFormula, splitReference
+from spaceStation.formulas import getFormula, calculateFormula,\
+    getReferencesInFormula, splitReference,
+    setMetricValue
 from spaceStation import SpaceStationError
 
 # -----------
 # Application
 # -----------
 
-def calculateLayer(layer):
+def applyFormulasInLayer(layer):
     sequence = getResolutionSequence(layer)
     for group in sequence:
         for reference in group:
             glyphName, attr = splitReference(reference)
-
+            glyph = layer[glyphName]
+            formula = getFormula(glyph, attr)
+            value = calculateFormula(glyph, formula, attr)
+            setMetricValue(glyph, attr, value)
 
 # ---------------------
 # Resolution Sequencing
@@ -63,9 +68,3 @@ def getDependenciesForGlyph(glyph, attr):
     formula = getFormula(glyph, attr)
     references = getReferencesInFormula(formula, attr)
     return references
-
-
-layer = CurrentLayer()
-r = getResolutionSequence(layer)
-for i in r:
-    print(len(i), i)

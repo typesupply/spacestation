@@ -23,7 +23,7 @@ def setFormula(glyph, attr, formula):
     else:
         glyph.lib[key] = formula
 
-def clearFormulas(glyph, attr=None):
+def clearFormula(glyph, attr=None):
     """
     Clear the formula for the attr from the glyph.
     If no attr is given, all attrs will be cleared.
@@ -267,7 +267,7 @@ def glyphFromString(glyph, text):
     Load the formulas for the glyph from the text.
     This does not apply the calculated formulas.
     """
-    clearFormulas(glyph)
+    clearFormula(glyph)
     for line in text.splitlines():
         line = line.split("#", 1)[0]
         line = line.strip()
