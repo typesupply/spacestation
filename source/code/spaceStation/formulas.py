@@ -131,6 +131,11 @@ def getReferencesInFormula(formula, impliedAttr):
             continue
         if i in symbolToAttribute:
             continue
+        try:
+            float(i)
+            continue
+        except ValueError:
+            pass
         foundSymbol = False
         for symbol in symbolToAttribute.keys():
             if i.endswith(symbol):

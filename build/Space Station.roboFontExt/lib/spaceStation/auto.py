@@ -1,5 +1,5 @@
 from spaceStation.formulas import getFormula, calculateFormula,\
-    getReferencesInFormula, splitReference,
+    getReferencesInFormula, splitReference,\
     setMetricValue
 from spaceStation import SpaceStationError
 
@@ -14,8 +14,9 @@ def applyFormulasInLayer(layer):
             glyphName, attr = splitReference(reference)
             glyph = layer[glyphName]
             formula = getFormula(glyph, attr)
-            value = calculateFormula(glyph, formula, attr)
-            setMetricValue(glyph, attr, value)
+            if formula:
+                value = calculateFormula(glyph, formula, attr)
+                setMetricValue(glyph, attr, value)
 
 # ---------------------
 # Resolution Sequencing
@@ -30,6 +31,13 @@ def getResolutionSequence(layer):
         for attr in "leftMargin rightMargin width".split(" "):
             formula = getFormula(glyph, attr)
             if formula:
+                if attr == "leftMargin":
+                    a = "@left"
+                elif attr == "rightMargin":
+                    a = "@right"
+                else:
+                    a = "@width"
+                glyphNames.add(glyphName + a)
                 glyphNames |= getReferencesInFormula(formula, attr)
     sequence = [glyphNames]
     for i in range(maximumReferenceDepth):
