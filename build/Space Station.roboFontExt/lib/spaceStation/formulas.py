@@ -17,6 +17,8 @@ def setFormula(glyph, attr, formula):
     Set the formula in the glyph for the attr.
     """
     key = formulaLibKeyStub + attr
+    if glyph.lib.get(key) == formula:
+        return
     if formula is None:
         if key in glyph.lib:
             del glyph.lib[key]
@@ -172,6 +174,7 @@ def setMetricValue(glyph, attr, value):
     Set the metric value for an attribute.
     """
     attr = getAngledAttrIfNecessary(glyph.font, attr)
+    value = roundint(value)
     setattr(glyph, attr, value)
 
 def getAngledAttrIfNecessary(font, attr):

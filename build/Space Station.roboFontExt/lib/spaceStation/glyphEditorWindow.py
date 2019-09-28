@@ -144,7 +144,7 @@ class GlyphEditorSpaceStationController(object):
             if not formula:
                 button.setTitle("")
                 button.enable(False)
-                return
+                continue
             calculatedValue = calculateFormula(self.glyph, formula, attr)
             value = getMetricValue(self.glyph, attr)
             if roundint(value) != roundint(calculatedValue):
