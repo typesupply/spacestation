@@ -1,5 +1,6 @@
 from AppKit import *
 import vanilla
+from mojo.roboFont import CurrentGlyph
 from mojo.UI import StatusInteractivePopUpWindow, CurrentGlyphWindow
 from .formulas import getFormula, setFormula, clearFormula, calculateFormula, getMetricValue, setMetricValue
 from .tools import roundint
@@ -14,8 +15,6 @@ escapeCharacter = "\x1B"
 class GlyphEditorSpaceStationController(object):
 
     def __init__(self, glyph):
-        self.glyph = glyph
-
         self.w = StatusInteractivePopUpWindow((250, 0), centerInView=CurrentGlyphWindow().getGlyphView())
 
         metrics = dict(
@@ -25,6 +24,7 @@ class GlyphEditorSpaceStationController(object):
             titleWidth=45,
             inputSpace=70, # border + title + padding
             killButtonWidth=20,
+            navigateButtonWidth=30,
             fieldHeight=22,
         )
         rules = [
@@ -54,8 +54,11 @@ class GlyphEditorSpaceStationController(object):
 
             # Bottom
             "H:|-inputSpace-[line]-border-|",
-            "H:|-inputSpace-[doneButton]-border-|",
-            "V:[widthButton]-padding1-[line]-padding1-[doneButton]-border-|",
+            "H:|-inputSpace-[previousGlyphButton(==navigateButtonWidth)]-padding2-[nextGlyphButton(==navigateButtonWidth)]-padding1-[doneButton(>=0)]-border-|",
+            "V:[widthButton]-padding1-[line]",
+            "V:[line]-padding1-[previousGlyphButton]-border-|",
+            "V:[line]-padding1-[nextGlyphButton]-border-|",
+            "V:[line]-padding1-[doneButton]-border-|",
         ]
 
         self.w.leftTitle = vanilla.TextBox("auto", "Left:", alignment="right")
@@ -83,23 +86,17 @@ class GlyphEditorSpaceStationController(object):
             button = group["button"]
             button.getNSButton().setAlignment_(NSLeftTextAlignment)
 
-        if self.glyph.bounds is None:
-            self.setFirstResponder(self.w.widthField)
-        else:
-            self.setFirstResponder(self.w.leftField)
-        leftField = self.w.leftField.getNSTextField()
-        rightField = self.w.rightField.getNSTextField()
-        leftField.setNextKeyView_(rightField)
-        rightField.setNextKeyView_(leftField)
-
         self.w.line = vanilla.HorizontalLine("auto")
         self.w.doneButton = vanilla.Button("auto", "Close", callback=self.doneCallback)
         self.w.doneButton.bind(escapeCharacter, [])
-
-        self._updateFields()
-        self._updateButtons()
+        self.w.previousGlyphButton = vanilla.Button("auto", "←", callback=self.previousGlyphCallback)
+        self.w.previousGlyphButton.bind("[", ["command"])
+        self.w.nextGlyphButton = vanilla.Button("auto", "→", callback=self.nextGlyphCallback)
+        self.w.nextGlyphButton.bind("]", ["command"])
 
         self.w.addAutoPosSizeRules(rules, metrics)
+
+        self.loadGlyph()
 
         self.w.open()
 
@@ -124,6 +121,21 @@ class GlyphEditorSpaceStationController(object):
     # --------
     # Updaters
     # --------
+
+    def loadGlyph(self):
+        self._inGlyphLoad = True
+        self.glyph = CurrentGlyph()
+        if self.glyph.bounds is None:
+            self.setFirstResponder(self.w.widthField)
+        else:
+            self.setFirstResponder(self.w.leftField)
+        leftField = self.w.leftField.getNSTextField()
+        rightField = self.w.rightField.getNSTextField()
+        leftField.setNextKeyView_(rightField)
+        rightField.setNextKeyView_(leftField)
+        self._updateFields()
+        self._updateButtons()
+        self._inGlyphLoad = False
 
     def _updateFields(self):
         for group in self.controlGroups:
@@ -160,6 +172,8 @@ class GlyphEditorSpaceStationController(object):
     # ---------
 
     def fieldCallback(self, sender):
+        if self._inGlyphLoad:
+            return
         group = self._getControlGroup(sender)
         attr = group["attr"]
         field = group["field"]
@@ -207,3 +221,12 @@ class GlyphEditorSpaceStationController(object):
             self.glyph.performUndo()
         self._updateFields()
         self._updateButtons()
+
+    def previousGlyphCallback(self, sender):
+        CurrentGlyphWindow().getGlyphView().previousGlyph_()
+        self.loadGlyph()
+
+    def nextGlyphCallback(self, sender):
+        CurrentGlyphWindow().getGlyphView().nextGlyph_()
+        self.loadGlyph()
+
