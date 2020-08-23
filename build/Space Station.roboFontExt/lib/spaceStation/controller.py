@@ -1,12 +1,11 @@
 from AppKit import NSBeep
 from fontParts.world import CurrentGlyph
-from booster.controller import BoosterController
 from .glyphEditorWindow import GlyphEditorSpaceStationController
 
 controllerIdentifier = "com.typesupply.SpaceStation"
 
 
-class _SpaceStationController(BoosterController):
+class _SpaceStationController(object):
 
     identifier = controllerIdentifier
 
