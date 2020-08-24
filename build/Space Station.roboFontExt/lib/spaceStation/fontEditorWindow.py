@@ -49,7 +49,8 @@ class FontEditorSpaceStationController(object):
             "auto",
             data,
             columnDescriptions=columnDescriptions,
-            drawFocusRing=False
+            drawFocusRing=False,
+            editCallback=self.listEditCallback
         )
         self.w.updateAllButton = vanilla.ImageButton(
             "auto",
@@ -186,8 +187,10 @@ class FontEditorSpaceStationController(object):
         self.w.close()
 
     def updateAllData(self):
+        self._inInternalDataUpdate = True
         for container in self.w.list:
             self.getDataForGlyphName(container["name"], container)
+        self._inInternalDataUpdate = False
 
     def getDataForGlyphName(self, glyphName, container=None):
         if container is None:
@@ -217,6 +220,55 @@ class FontEditorSpaceStationController(object):
             if v is None:
                 container[k] = ""
         return container
+
+    # ----
+    # Edit
+    # ----
+
+    _inInternalDataUpdate = False
+
+    def listEditCallback(self, sender):
+        if self._inInternalDataUpdate:
+            return
+        self._inInternalDataUpdate = True
+        selection = sender.getSelection()[0]
+        container = sender[selection]
+        glyphName = container["name"]
+        glyph = self.layer[glyphName]
+        left = container.get("left", "")
+        if left:
+            left = str(left)
+            formulas.setFormula(glyph, "leftMargin", left)
+            container["left"] = visualizeFormula(
+                glyph,
+                "leftMargin",
+                left
+            )
+        else:
+            formulas.clearFormula(glyph, "leftMargin")
+        right = container.get("right", "")
+        if right:
+            right = str(right)
+            formulas.setFormula(glyph, "rightMargin", right)
+            container["right"] = visualizeFormula(
+                glyph,
+                "rightMargin",
+                right
+            )
+        else:
+            formulas.clearFormula(glyph, "rightMargin")
+        width = container.get("width", "")
+        if width:
+            width = str(width)
+            formulas.setFormula(glyph, "width", width)
+            container["width"] = visualizeFormula(
+                glyph,
+                "width",
+                width
+            )
+        else:
+            formulas.clearFormula(glyph, "width")
+        self._inInternalDataUpdate = False
 
     # ------------
     # Update/Clear
@@ -271,7 +323,7 @@ class FontEditorSpaceStationController(object):
     def _importCallback(self, path):
         if not path:
             return
-        for glyph in layer:
+        for glyph in self.layer:
             formulas.clearFormula(glyph, "leftMargin")
             formulas.clearFormula(glyph, "rightMargin")
             formulas.clearFormula(glyph, "width")
@@ -279,7 +331,7 @@ class FontEditorSpaceStationController(object):
         f = open(path, "r")
         text = f.read()
         f.close()
-        tools.readFormulasFromString(text, self.layer)
+        formulas.layerFromString(self.layer, text)
         self.updateAllData()
 
     def exportButtonCallback(self, sender):
@@ -295,7 +347,11 @@ class FontEditorSpaceStationController(object):
     def _exportCallback(self, path):
         if not path:
             return
-        text = tools.writeFormulasToString(self.layer)
+        glyphOrder = list(self.font.glyphOrder)
+        for name in sorted(self.layer.keys()):
+            if name not in glyphOrder:
+                glyphOrder.append(name)
+        text = formulas.layerToString(self.layer, glyphOrder)
         f = open(path, "w")
         f.write(text)
         f.close()
@@ -306,11 +362,25 @@ red = AppKit.NSColor.redColor()
 def visualizeFormula(glyph, attr, formula):
     if not formula:
         return formula
-    calculatedValue = formulas.calculateFormula(glyph, formula, attr)
-    value = formulas.getMetricValue(glyph, attr)
-    if tools.roundint(value) != tools.roundint(calculatedValue):
+    calculatedValue = formulas.calculateFormula(
+        glyph,
+        formula,
+        formulas.getAngledAttrIfNecessary(glyph.font, attr)
+    )
+    needColor = False
+    if calculatedValue is None:
+        needColor = True
+    else:
+        value = formulas.getMetricValue(glyph, attr)
+        if tools.roundint(value) != tools.roundint(calculatedValue):
+            needColor = True
+    if needColor:
         formula = AppKit.NSAttributedString.alloc().initWithString_attributes_(
-                formula,
-                {AppKit.NSForegroundColorAttributeName : red}
-            )
+            formula,
+            {AppKit.NSForegroundColorAttributeName : red}
+        )
     return formula
+
+if __name__ == "__main__":
+    font = CurrentFont()
+    FontEditorSpaceStationController(font.defaultLayer)

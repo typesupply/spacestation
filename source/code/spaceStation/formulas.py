@@ -240,9 +240,10 @@ def glyphToString(glyph):
         else:
             line += formula
             value = roundint(getMetricValue(glyph, attr))
-            calculated = roundint(calculateFormula(glyph, formula, attr))
+            calculated = calculateFormula(glyph, formula, attr)
+            if calculated is not None:
+                calculated = roundint(calculated)
             if value != calculated:
-                line = "#" + line
                 line += " # value: {value} expected: {calculated}".format(value=value, calculated=calculated)
         text.append(line)
     return "\n".join(text)
