@@ -11,8 +11,13 @@ pycOnly = False
 menuItems = [
     dict(
         path="menu_glyphEditorSpaceStation.py",
-        preferredName="Space Station",
+        preferredName="Glyph Editor",
         shortKey=("command", "/")
+    ),
+    dict(
+        path="menu_fontEditorSpaceStation.py",
+        preferredName="Font Editor",
+        shortKey=""
     )
 ]
 
@@ -42,8 +47,18 @@ for menuItem in menuItems:
 	if isinstance(shortKey, tuple):
 		shortKey = list(shortKey)
 		character = shortKey.pop(-1)
-		converted = [modifierMap.get(modifier) for modifier in shortKey]
-		converted.append(character)
+		modifiers = [modifierMap.get(modifier, modifier) for modifier in shortKey]
+		if len(modifiers) == 1:
+			modifiers = modifiers[0]
+		else:
+			m = None
+			for modifier in modifiers:
+				if m is None:
+					m = modifier
+				else:
+					m |= modifier
+			modifiers = m
+		converted = (modifiers, character)
 		menuItem["shortKey"] = tuple(converted)
 
 # Make the various paths.

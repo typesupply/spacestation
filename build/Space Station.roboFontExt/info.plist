@@ -8,12 +8,20 @@
 			<key>path</key>
 			<string>menu_glyphEditorSpaceStation.py</string>
 			<key>preferredName</key>
-			<string>Space Station</string>
+			<string>Glyph Editor</string>
 			<key>shortKey</key>
 			<array>
 				<integer>1048576</integer>
 				<string>/</string>
 			</array>
+		</dict>
+		<dict>
+			<key>path</key>
+			<string>menu_fontEditorSpaceStation.py</string>
+			<key>preferredName</key>
+			<string>Font Editor</string>
+			<key>shortKey</key>
+			<string></string>
 		</dict>
 	</array>
 	<key>developer</key>
@@ -33,7 +41,7 @@
 	<key>requiresVersionMinor</key>
 	<string>2</string>
 	<key>timeStamp</key>
-	<real>1598192709.6255639</real>
+	<real>1598279568.8784919</real>
 	<key>version</key>
 	<string>0.1</string>
 </dict>

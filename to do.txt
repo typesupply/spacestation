@@ -1,5 +1,6 @@
-- add (X) to clear stored formula
-- buttons aren't always disabled at startup as needed
+- selective import/export
 - use cmd, shift and option + arrow to make quick adjustments
-
+- add update dependents button (or maybe one each for L R W)
+- add indicator to glyph editor that shows if there is a link and if it is up to date
+- add indicator to glyph cells to indicate if there is a link and if it is up to date
 - HUD control with quick shortcuts to apply formula

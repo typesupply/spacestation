@@ -7,11 +7,17 @@ from spaceStation import SpaceStationError
 # Application
 # -----------
 
-def applyFormulasInLayer(layer):
+def applyFormulasInLayer(layer, onlyGlyphNames=None, onlyAttr=None):
+    if onlyGlyphNames is None:
+        onlyGlyphNames = layers.keys()
     sequence = getResolutionSequence(layer)
     for group in sequence:
         for reference in group:
             glyphName, attr = splitReference(reference)
+            if glyphName not in onlyGlyphNames:
+                continue
+            if onlyAttr is not None and attr != onlyAttr:
+                continue
             glyph = layer[glyphName]
             formula = getFormula(glyph, attr)
             if formula:
