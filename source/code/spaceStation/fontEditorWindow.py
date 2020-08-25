@@ -335,8 +335,8 @@ class FontEditorSpaceStationController(object):
         self.updateAllData()
 
     def exportButtonCallback(self, sender):
-        directory = os.path.dirname(font.path)
-        fileName = os.path.splitext(os.path.basename(font.path))[0] + ".spacestation"
+        directory = os.path.dirname(self.font.path)
+        fileName = os.path.splitext(os.path.basename(self.font.path))[0] + ".spacestation"
         vanilla.dialogs.putFile(
             resultCallback=self._exportCallback,
             parentWindow=self.w,
