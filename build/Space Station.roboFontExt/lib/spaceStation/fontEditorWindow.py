@@ -1,4 +1,5 @@
 import os
+import fnmatch
 import AppKit
 import vanilla
 from mojo.UI import CurrentFontWindow
@@ -19,10 +20,6 @@ class FontEditorSpaceStationController(object):
             parentWindow=CurrentFontWindow().w
         )
 
-        data = [
-            self.getDataForGlyphName(glyphName)
-            for glyphName in self.font.glyphOrder
-        ]
         columnDescriptions = [
             dict(
                 key="name",
@@ -47,11 +44,25 @@ class FontEditorSpaceStationController(object):
         ]
         self.w.list = vanilla.List(
             "auto",
-            data,
+            [],
             columnDescriptions=columnDescriptions,
             drawFocusRing=False,
             editCallback=self.listEditCallback
         )
+
+        self.w.filterSearchBox = vanilla.SearchBox(
+            "auto",
+            callback=self.populateList
+        )
+        self.w.prioritizeProblemsCheckBox = vanilla.CheckBox(
+            "auto",
+            "Prioritize Problems",
+            value=True,
+            callback=self.populateList
+        )
+
+        self.w.line = vanilla.HorizontalLine("auto")
+
         self.w.updateAllButton = vanilla.ImageButton(
             "auto",
             imageNamed=AppKit.NSImageNameRefreshTemplate,
@@ -133,6 +144,8 @@ class FontEditorSpaceStationController(object):
             column4=690
         )
         rules = [
+            "H:|-margin-[filterSearchBox(==215)]-spacing-[prioritizeProblemsCheckBox]",
+            "H:|-margin-[line]-margin-|",
             "H:|-column1-[updateAllButton(==imageButton)]-padding-[clearAllButton(==imageButton)]",
             "H:|-column2-[updateLeftButton(==imageButton)]-padding-[clearLeftButton(==imageButton)]",
             "H:|-column3-[updateRightButton(==imageButton)]-padding-[clearRightButton(==imageButton)]",
@@ -142,6 +155,10 @@ class FontEditorSpaceStationController(object):
             "H:[closeButton(==button)]-margin-|",
             "V:|"
                 "-margin-"
+                "[filterSearchBox]"
+                "-spacing-"
+                "[line]"
+                "-spacing-"
                 "[updateAllButton(==imageButton)]"
                 "-padding-"
                 "[list]"
@@ -151,24 +168,34 @@ class FontEditorSpaceStationController(object):
             "|",
             "V:|"
                 "-margin-"
+                "[prioritizeProblemsCheckBox(==filterSearchBox)]",
+            "V:"
+                "[line]"
+                "-spacing-"
                 "[clearAllButton(==imageButton)]",
-            "V:|"
-                "-margin-"
+            "V:"
+                "[line]"
+                "-spacing-"
                 "[updateLeftButton(==imageButton)]",
-            "V:|"
-                "-margin-"
+            "V:"
+                "[line]"
+                "-spacing-"
                 "[clearLeftButton(==imageButton)]",
-            "V:|"
-                "-margin-"
+            "V:"
+                "[line]"
+                "-spacing-"
                 "[updateRightButton(==imageButton)]",
-            "V:|"
-                "-margin-"
+            "V:"
+                "[line]"
+                "-spacing-"
                 "[clearRightButton(==imageButton)]",
-            "V:|"
-                "-margin-"
+            "V:"
+                "[line]"
+                "-spacing-"
                 "[updateWidthButton(==imageButton)]",
-            "V:|"
-                "-margin-"
+            "V:"
+                "[line]"
+                "-spacing-"
                 "[clearWidthButton(==imageButton)]",
             "V:"
                 "[list]"
@@ -181,10 +208,42 @@ class FontEditorSpaceStationController(object):
         ]
 
         self.w.addAutoPosSizeRules(rules, metrics)
+        self.populateList()
         self.w.open()
 
     def closeButtonCallback(self, sender):
         self.w.close()
+
+    def populateList(self, sender=None):
+        searchPattern = self.w.filterSearchBox.get()
+        glyphNames = [name for name in self.font.glyphOrder if name in self.layer]
+        for glyphName in sorted(self.layer.keys()):
+            if glyphName not in glyphNames:
+                glyphNames.append(gyphName)
+        if searchPattern:
+            glyphNames = [
+                glyphName
+                for glyphName in glyphNames
+                if fnmatch.fnmatchcase(glyphName, searchPattern)
+            ]
+        if self.w.prioritizeProblemsCheckBox.get():
+            problems = []
+            noProblems = []
+            for glyphName in glyphNames:
+                data = self.getDataForGlyphName(glyphName)
+                if data["leftHasProblem"] or data["rightHasProblem"] or data["widthHasProblem"]:
+                    problems.append(data)
+                else:
+                    noProblems.append(data)
+            data = problems + noProblems
+        else:
+            data = [
+                self.getDataForGlyphName(glyphName)
+                for glyphName in glyphNames
+            ]
+        self._inInternalDataUpdate = True
+        self.w.list.set(data)
+        self._inInternalDataUpdate = False
 
     def updateAllData(self):
         self._inInternalDataUpdate = True
@@ -197,25 +256,34 @@ class FontEditorSpaceStationController(object):
             container = dict(
                 name=glyphName,
                 left=None,
+                leftHasProblem=False,
                 right=None,
-                width=None
+                rightHasProblem=False,
+                width=None,
+                widthHasProblem=False
             )
         glyph = self.layer[glyphName]
-        container["left"] = visualizeFormula(
+        left, leftHasProblem = visualizeFormula(
             glyph,
             "leftMargin",
             formulas.getFormula(glyph, "leftMargin")
         )
-        container["right"] = visualizeFormula(
+        container["left"] = left
+        container["leftHasProblem"] = leftHasProblem
+        right, rightHasProblem = visualizeFormula(
             glyph,
             "rightMargin",
             formulas.getFormula(glyph, "rightMargin")
         )
-        container["width"] = visualizeFormula(
+        container["right"] = right
+        container["rightHasProblem"] = rightHasProblem
+        width, widthHasProblem = visualizeFormula(
             glyph,
             "width",
             formulas.getFormula(glyph, "width")
         )
+        container["width"] = width
+        container["widthHasProblem"] = widthHasProblem
         for k, v in container.items():
             if v is None:
                 container[k] = ""
@@ -230,7 +298,6 @@ class FontEditorSpaceStationController(object):
     def listEditCallback(self, sender):
         if self._inInternalDataUpdate:
             return
-        self._inInternalDataUpdate = True
         selection = sender.getSelection()[0]
         container = sender[selection]
         glyphName = container["name"]
@@ -239,36 +306,21 @@ class FontEditorSpaceStationController(object):
         if left:
             left = str(left)
             formulas.setFormula(glyph, "leftMargin", left)
-            container["left"] = visualizeFormula(
-                glyph,
-                "leftMargin",
-                left
-            )
         else:
             formulas.clearFormula(glyph, "leftMargin")
         right = container.get("right", "")
         if right:
             right = str(right)
             formulas.setFormula(glyph, "rightMargin", right)
-            container["right"] = visualizeFormula(
-                glyph,
-                "rightMargin",
-                right
-            )
         else:
             formulas.clearFormula(glyph, "rightMargin")
         width = container.get("width", "")
         if width:
             width = str(width)
             formulas.setFormula(glyph, "width", width)
-            container["width"] = visualizeFormula(
-                glyph,
-                "width",
-                width
-            )
         else:
             formulas.clearFormula(glyph, "width")
-        self._inInternalDataUpdate = False
+        self.updateAllData()
 
     # ------------
     # Update/Clear
@@ -361,7 +413,7 @@ red = AppKit.NSColor.redColor()
 
 def visualizeFormula(glyph, attr, formula):
     if not formula:
-        return formula
+        return formula, False
     calculatedValue = formulas.calculateFormula(
         glyph,
         formula,
@@ -379,8 +431,4 @@ def visualizeFormula(glyph, attr, formula):
             formula,
             {AppKit.NSForegroundColorAttributeName : red}
         )
-    return formula
-
-if __name__ == "__main__":
-    font = CurrentFont()
-    FontEditorSpaceStationController(font.defaultLayer)
+    return formula, needColor
